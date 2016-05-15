@@ -1,25 +1,31 @@
 from tkinter import *
 import sys
+import time
 import threading
 import socket              
 
-def updateWindow(window):
-    window.update_idletasks()
-    window.update()
-
 def sendToPeerButton():
-    pass
+    global inputEntryBox
+    message = inputEntryBox.get()
+    peer.send(message.encode(encoding='utf_8'))
 
 def onClose():
+    global bShouldReadIncomingMessages
+    bShouldReadIncomingMessages = False
     peer.close()              
     peerRecv.close()
     mainWindow.destroy()
+    sys.exit()
 
 def incomingMessages():
+    global bShouldReadIncomingMessages
+    global messageDisplay
     while(bShouldReadIncomingMessages):
-        print("Incoming messages")
+        peersMessage = peerRecv.recv(1024)
+        messageDisplay.insert(END, peersMessage)
 
 bShouldReadIncomingMessages = True
+
 mainWindow= Tk()
 mainWindow.protocol("WM_DELETE_WINDOW", onClose)
 entryFrame = Frame(mainWindow)
@@ -78,4 +84,5 @@ else:
 
 incomingMessagesThread = threading.Thread(target=incomingMessages)
 incomingMessagesThread.start()
+
 mainWindow.mainloop()
