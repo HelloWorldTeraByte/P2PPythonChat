@@ -2,6 +2,34 @@ from tkinter import *
 import threading
 import socket              
 
+def updateWindow(window):
+    window.update_idletasks()
+    window.update()
+
+def sendToPeerButton():
+    pass
+
+def onClose():
+    peer.close()              
+    peerRecv.close()
+    mainWindow.destroy()
+
+mainWindow= Tk()
+mainWindow.protocol("WM_DELETE_WINDOW", onClose)
+entryFrame = Frame(mainWindow)
+entryFrame.pack(side=BOTTOM)
+
+messageDisplay = Text(mainWindow, height=30, width=40) 
+messageDisplay.pack(expand=True, fill='both')
+
+sendButton = Button(entryFrame, text ="Send", command = sendToPeerButton)
+sendButton.pack(side=RIGHT)
+
+inputEntryBox = Entry(entryFrame)
+inputEntryBox.pack(expand=True, fill='x')
+
+#mainWindow.mainloop()
+
 peerIp = '192.168.1.11'
 selfIp = '192.168.1.11'
 peerSendPort= 12345       
@@ -19,11 +47,6 @@ print("Connected to ", peerAddr)
 peerRecv.connect((peerIp, peerRecvPort))
 
 while True:
-    message = str(input(": "))
-    if(message == "q"):
-        break
-    peer.send(message.encode(encoding='utf_8'))
-    print(peerRecv.recv(1024))
+    updateWindow(mainWindow)
 
-peerSend.close()              
-peerRecv.close()
+

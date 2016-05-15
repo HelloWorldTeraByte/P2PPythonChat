@@ -4,34 +4,23 @@ import time
 import threading
 import socket              
 
+def updateWindow(window):
+    window.update_idletasks()
+    window.update()
+
 def sendToPeerButton():
-    global inputEntryBox
-    message = inputEntryBox.get()
-    peer.send(message.encode(encoding='utf_8'))
+    pass
 
 def onClose():
-    global bShouldReadIncomingMessages
-    global bIsWindowOpen
-    bShouldReadIncomingMessages = False
     peer.close()              
     peerRecv.close()
-    bIsWindowOpen = False
     mainWindow.destroy()
-    print("Exitiing")
-    sys.exit()
 
 def incomingMessages():
-    global bShouldReadIncomingMessages
-    global message
-    global bUpdateDisplayBox
     while(bShouldReadIncomingMessages):
-        message = peerRecv.recv(1024)
-        bUpdateDisplayBox = True
+        print("Incoming messages")
 
 bShouldReadIncomingMessages = True
-bUpdateDisplayBox = False
-bIsWindowOpen = True
-message = ''
 mainWindow= Tk()
 mainWindow.protocol("WM_DELETE_WINDOW", onClose)
 entryFrame = Frame(mainWindow)
@@ -90,10 +79,5 @@ else:
 
 incomingMessagesThread = threading.Thread(target=incomingMessages)
 incomingMessagesThread.start()
-
-while bIsWindowOpen:
-    mainWindow.update_idletasks()
-    mainWindow.update()
-    if(bUpdateDisplayBox):
-        messageDisplay.insert(END, message)
-        bUpdateDisplayBox = False
+time.sleep(3)
+mainWindow.mainloop()
