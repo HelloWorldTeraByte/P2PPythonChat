@@ -17,7 +17,7 @@ def onClose():
     peerRecv.close()
     bIsWindowOpen = False
     mainWindow.destroy()
-    print("Exitiing")
+    print("Exiting")
     sys.exit()
 
 def incomingMessages():
@@ -31,7 +31,24 @@ def incomingMessages():
 bShouldReadIncomingMessages = True
 bUpdateDisplayBox = False
 bIsWindowOpen = True
+bListen = False
 message = ''
+
+while True:
+    choice = input("Peer To Peer Chat \n\t(C)to connect \n\t(L)to listen\n")
+
+    if(choice == "C" or choice == "c"):
+        peerSendPort= 12345       
+        peerRecvPort = 12346
+        bListen = False
+        break
+
+    elif(choice == "L" or choice == 'l'):
+        peerSendPort= 12346      
+        peerRecvPort = 12345
+        bListen = True
+        break
+
 mainWindow= Tk()
 mainWindow.protocol("WM_DELETE_WINDOW", onClose)
 entryFrame = Frame(mainWindow)
@@ -44,21 +61,7 @@ sendButton = Button(entryFrame, text ="Send", command = sendToPeerButton)
 sendButton.pack(side=RIGHT)
 
 inputEntryBox = Entry(entryFrame)
-inputEntryBox.pack(expand=True, fill='x')
-
-if(len(sys.argv) == 2):
-    if(sys.argv[1] == 'l' or sys.argv[1] == 'L'):
-        peerSendPort= 12345       
-        peerRecvPort = 12346
-    elif(sys.argv[1] == 'c' or sys.argv[1] == 'C'):
-        peerSendPort= 12346      
-        peerRecvPort = 12345
-    else:
-        print("Pass in \n\t(C)to connect \n\t(L)to listen")
-        sys.exit()
-else:
-    print("Pass in \n\t(C)to connect \n\t(L)to listen")
-    sys.exit()
+inputEntryBox.pack(side=LEFT, expand=True, fill='x')
 
 peerIp = '192.168.1.11'
 selfIp = '192.168.1.11'
@@ -68,25 +71,18 @@ peerSend.bind((selfIp, peerSendPort))
 
 peerRecv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-if(len(sys.argv) == 2):
-    if(sys.argv[1] == 'l' or sys.argv[1] == 'L'):
-        print("Listening on port: ", peerSendPort)
-        peerSend.listen(1)              
-        peer, peerAddr = peerSend.accept()    
-        print("Connected to ", peerAddr)
-        peerRecv.connect((peerIp, peerRecvPort))
-    elif(sys.argv[1] == 'c' or sys.argv[1] == 'C'):
-        peerRecv.connect((peerIp, peerRecvPort))
-        print("Connected to: ", peerIp)
-        print("Waiting for reply .. \n")
-        peerSend.listen(1)
-        peer, peerAddr = peerSend.accept()
-    else:
-        print("Pass in \n\t(C)to connect \n\t(L)to listen")
-        sys.exit()
+if(bListen):
+    print("Listening on port: ", peerSendPort)
+    peerSend.listen(1)              
+    peer, peerAddr = peerSend.accept()    
+    print("Connected to ", peerAddr)
+    peerRecv.connect((peerIp, peerRecvPort))
 else:
-    print("Pass in \n\t(C)to connect \n\t(L)to listen")
-    sys.exit()
+    peerRecv.connect((peerIp, peerRecvPort))
+    print("Connected to: ", peerIp)
+    print("Waiting for reply .. \n")
+    peerSend.listen(1)
+    peer, peerAddr = peerSend.accept()
 
 incomingMessagesThread = threading.Thread(target=incomingMessages)
 incomingMessagesThread.start()
