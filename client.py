@@ -14,18 +14,12 @@ def onClose():
     peer.close()              
     peerRecv.close()
     mainWindow.destroy()
-    bShouldStopIncomingMessages = True
 
-class incomingMessages(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
+def incomingMessages():
+    while(bShouldReadIncomingMessages):
+        print("Incoming messages")
 
-     def run(self): 
-         while True:
-             if(bShouldStopIncomingMessages == True):
-                 break
-
-bShouldStopIncomingMessages = False
+bShouldReadIncomingMessages = True
 mainWindow= Tk()
 mainWindow.protocol("WM_DELETE_WINDOW", onClose)
 entryFrame = Frame(mainWindow)
@@ -82,7 +76,6 @@ else:
     print("Pass in \n\t(C)to connect \n\t(L)to listen")
     sys.exit()
 
-incomingMessagesThread = incomingMessages()
+incomingMessagesThread = threading.Thread(target=incomingMessages)
 incomingMessagesThread.start()
-
 mainWindow.mainloop()
