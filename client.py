@@ -9,16 +9,10 @@ def sendToPeerButton():
     if(not message == ''):
         inputEntryBox.delete(0, END)
         message += "\n"
-        #peer.send(message.encode(encoding='utf_8'))
         peer.send(str.encode(message))
         messageDisplay.config(state=NORMAL)
         messageDisplay.insert(END, message, "sendTextStyle")
         messageDisplay.config(state=DISABLED)
-        
-def closeConnections():
-    peer.send(str.encode("0"))
-    peer.close()              
-    peerRecv.close()
     
 def onEnterButtonPressed(event):
     if(not inputEntryBox.get == ''):
@@ -28,23 +22,26 @@ def onClose():
     global bShouldReadIncomingMessages
     global bIsWindowOpen
     global bUpdateDisplayBox
+    peer.send(str.encode("c10s3c0nn"))
     bUpdateDisplayBox = False
     bShouldReadIncomingMessages = False
-    closeConnections()
     bIsWindowOpen = False
     mainWindow.destroy()
     print("Exiting")
-    #sys.exit()
 
 def incomingMessages():
     global bShouldReadIncomingMessages
     global message
     global bUpdateDisplayBox
+    global bPeerDisconnected
     while(bShouldReadIncomingMessages):
         message = peerRecv.recv(1024)
         bUpdateDisplayBox = True
+        if(message.decode('utf-8') == "c10s3c0nn"):
+            bPeerDisconnected = True
 
 bShouldReadIncomingMessages = True
+bPeerDisconnected = True
 bUpdateDisplayBox = False
 bIsWindowOpen = True
 bListen = False
@@ -74,6 +71,7 @@ entryFrame.pack(side=BOTTOM, fill='x')
 messageDisplay = Text(mainWindow, height=30, width=40) 
 messageDisplay.pack(expand=True, fill='both')
 messageDisplay.tag_configure("sendTextStyle", foreground="green", justify='right')
+messageDisplay.tag_configure("errorTextStyle", foreground="red", justify='center')
 messageDisplay.config(state=DISABLED)
 
 sendButton = Button(entryFrame, text ="Send", command = sendToPeerButton)
@@ -106,6 +104,8 @@ else:
     print("Waiting for reply .. \n")
     peerSend.listen(1)
     peer, peerAddr = peerSend.accept()
+    
+bPeerDisconnected = False
 
 incomingMessagesThread = threading.Thread(target=incomingMessages)
 incomingMessagesThread.start()
@@ -113,9 +113,18 @@ incomingMessagesThread.start()
 while bIsWindowOpen:
     mainWindow.update_idletasks()
     mainWindow.update()
+        
     if(bUpdateDisplayBox):
+        if(bPeerDisconnected):
+            #messageDisplay.config(state=NORMAL)
+            messageDisplay.insert(END, "\nDisconnected....", "errorTextStyle")
+            #messageDisplay.config(state=DISABLED) 
+            bUpdateDisplayBox = False
+            
         message = message.decode('utf-8')
-        messageDisplay.config(state=NORMAL)
-        messageDisplay.insert(END, message)
-        messageDisplay.config(state=DISABLED)
-        bUpdateDisplayBox = False
+        if(not message == "c10s3c0nn"):
+            messageDisplay.config(state=NORMAL)
+            messageDisplay.insert(END, message)
+            messageDisplay.config(state=DISABLED)
+            bUpdateDisplayBox = False
+             
