@@ -5,20 +5,36 @@ import threading
 import socket              
 
 def sendToPeerButton():
-    global inputEntryBox
     message = inputEntryBox.get()
-    peer.send(message.encode(encoding='utf_8'))
-
+    if(not message == ''):
+        inputEntryBox.delete(0, END)
+        message += "\n"
+        #peer.send(message.encode(encoding='utf_8'))
+        peer.send(str.encode(message))
+        messageDisplay.config(state=NORMAL)
+        messageDisplay.insert(END, message, "sendTextStyle")
+        messageDisplay.config(state=DISABLED)
+        
+def closeConnections():
+    peer.send(str.encode("0"))
+    peer.close()              
+    peerRecv.close()
+    
+def onEnterButtonPressed(event):
+    if(not inputEntryBox.get == ''):
+        sendToPeerButton()
+        
 def onClose():
     global bShouldReadIncomingMessages
     global bIsWindowOpen
+    global bUpdateDisplayBox
+    bUpdateDisplayBox = False
     bShouldReadIncomingMessages = False
-    peer.close()              
-    peerRecv.close()
+    closeConnections()
     bIsWindowOpen = False
     mainWindow.destroy()
     print("Exiting")
-    sys.exit()
+    #sys.exit()
 
 def incomingMessages():
     global bShouldReadIncomingMessages
@@ -51,11 +67,14 @@ while True:
 
 mainWindow= Tk()
 mainWindow.protocol("WM_DELETE_WINDOW", onClose)
+mainWindow.bind('<Return>', onEnterButtonPressed)
 entryFrame = Frame(mainWindow)
-entryFrame.pack(side=BOTTOM)
+entryFrame.pack(side=BOTTOM, fill='x')
 
 messageDisplay = Text(mainWindow, height=30, width=40) 
 messageDisplay.pack(expand=True, fill='both')
+messageDisplay.tag_configure("sendTextStyle", foreground="green", justify='right')
+messageDisplay.config(state=DISABLED)
 
 sendButton = Button(entryFrame, text ="Send", command = sendToPeerButton)
 sendButton.pack(side=RIGHT)
@@ -63,11 +82,15 @@ sendButton.pack(side=RIGHT)
 inputEntryBox = Entry(entryFrame)
 inputEntryBox.pack(side=LEFT, expand=True, fill='x')
 
-peerIp = '192.168.1.11'
-selfIp = '192.168.1.11'
+peerIp = '192.168.1.13'
+selfIp = '192.168.1.13'
 
 peerSend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-peerSend.bind((selfIp, peerSendPort))     
+
+try:
+    peerSend.bind((selfIp, peerSendPort))
+except socket.error as e:
+    print(str(e))
 
 peerRecv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -91,5 +114,8 @@ while bIsWindowOpen:
     mainWindow.update_idletasks()
     mainWindow.update()
     if(bUpdateDisplayBox):
+        message = message.decode('utf-8')
+        messageDisplay.config(state=NORMAL)
         messageDisplay.insert(END, message)
+        messageDisplay.config(state=DISABLED)
         bUpdateDisplayBox = False
