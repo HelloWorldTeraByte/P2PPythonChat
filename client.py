@@ -28,39 +28,139 @@ def onClose():
     bIsWindowOpen = False
     mainWindow.destroy()
     print("Exiting")
-
+    
+def connectButtonPressed():
+    global peerRecvPort
+    global peerSendPort
+    global bListen
+    global bShouldConnect
+    try:
+        peerRecvPort = int(recvPortsInputBox.get())
+    except ValueError:
+        peerRecvPort = 0
+        print("Not Valid")
+        
+    try:
+        peerSendPort = int(sendPortsInputBox.get())
+    except ValueError:
+        peerSendPort = 0
+        print("Not Valid")        
+        
+    if(not (peerRecvPort == 0 and peerSendPort == 0)):
+        if(bConnect.get() == 1):
+            bListen = False
+        else:
+            bListen = True
+        bShouldConnect = True
+        connectionWindow.destroy()
+        
+def fillInDefaults():
+    if(bConnect.get() == 1):
+        sendPortsInputBox.delete(0, END)
+        sendPortsInputBox.insert(END, "12345")
+        recvPortsInputBox.delete(0, END)
+        recvPortsInputBox.insert(END, "12346")
+    else:
+        sendPortsInputBox.delete(0, END)
+        sendPortsInputBox.insert(END, "12346")
+        recvPortsInputBox.delete(0, END)
+        recvPortsInputBox.insert(END, "12345")    
+        
 def incomingMessages():
     global bShouldReadIncomingMessages
     global message
     global bUpdateDisplayBox
     global bPeerDisconnected
     while(bShouldReadIncomingMessages):
-        message = peerRecv.recv(1024)
+        message = peerRecv.recv(3072)
         bUpdateDisplayBox = True
         if(message.decode('utf-8') == "c10s3c0nn"):
             bPeerDisconnected = True
-
+            
 bShouldReadIncomingMessages = True
 bPeerDisconnected = True
 bUpdateDisplayBox = False
 bIsWindowOpen = True
 bListen = False
 message = ''
+peerSendPort = 0
+peerRecvPort = 0
+bShouldConnect = False
+peerIp = '192.168.1.13'
+selfIp = '192.168.1.13'
 
-while True:
-    choice = input("Peer To Peer Chat \n\t(C)to connect \n\t(L)to listen\n")
+connectionWindow = Tk()
+connectionWindow.resizable(width=False, height=False)
+connectionWindow.geometry('{}x{}'.format(300, 120))
+isServer = IntVar(0)
+isServer.set(-1)
+bConnect = IntVar(0)
+bConnect.set(-1)
 
-    if(choice == "C" or choice == "c"):
-        peerSendPort= 12345       
-        peerRecvPort = 12346
-        bListen = False
-        break
+connectionInfoFrame = Frame(connectionWindow)
+connectionInfoLabels = Frame(connectionInfoFrame)
+connectionOptionsFrame = Frame(connectionWindow)
+listenOrConnectFrame = Frame(connectionWindow)
 
-    elif(choice == "L" or choice == 'l'):
-        peerSendPort= 12346      
-        peerRecvPort = 12345
-        bListen = True
-        break
+listenOrConnectFrame.pack(side=BOTTOM)
+connectionOptionsFrame.pack(side=RIGHT)
+connectionInfoFrame.pack(side=LEFT)
+connectionInfoLabels.pack(side=LEFT)
+
+
+serverCheckBox = Checkbutton(connectionOptionsFrame, text = "Server", variable = isServer, onvalue = 1, offvalue = 0)
+serverCheckBox.pack(side=TOP)
+peerCheckBox = Checkbutton(connectionOptionsFrame, text = "Peer", variable = isServer, onvalue = 0, offvalue = 1)
+peerCheckBox.pack(side=TOP)
+
+connectCheckBox = Checkbutton(listenOrConnectFrame, text = "Connect", variable = bConnect, onvalue=1, offvalue=0, command=fillInDefaults)
+connectCheckBox.pack(side=LEFT)
+recvCheckBox = Checkbutton(listenOrConnectFrame, text = "Receive", variable = bConnect, onvalue=0, offvalue=1, command=fillInDefaults)
+recvCheckBox.pack(side=RIGHT)
+recvCheckBox.select()
+
+connectButton = Button(connectionOptionsFrame, text ="Connect", command = connectButtonPressed)
+connectButton.pack(side=BOTTOM)
+
+ipLabel = Label(connectionInfoLabels, text="IP: ")
+ipLabel.pack(side=TOP)
+sendPortLabel = Label(connectionInfoLabels, text="Send Port: ")
+sendPortLabel.pack(side=BOTTOM)
+recvPortLabel = Label(connectionInfoLabels, text="Receive Port: ")
+recvPortLabel.pack(side=BOTTOM)
+
+ipInputBox = Entry(connectionInfoFrame)
+ipInputBox.pack(side=TOP, fill='x')
+sendPortsInputBox = Entry(connectionInfoFrame, width=6)
+sendPortsInputBox.pack(side=BOTTOM)
+recvPortsInputBox = Entry(connectionInfoFrame, width=6)
+recvPortsInputBox.pack(side=BOTTOM)
+
+fillInDefaults()
+connectionWindow.mainloop()
+
+
+if(not bShouldConnect):
+    print("Connection failed!")
+    sys.exit()
+
+
+#while True:
+    #choice = input("Peer To Peer Chat \n\t(C)to connect \n\t(L)to listen\n")
+
+    #if(choice == "C" or choice == "c"):
+        #peerSendPort= 12345       
+        #peerRecvPort = 12346
+        #bListen = False
+        #break
+
+    #elif(choice == "L" or choice == 'l'):
+        #peerSendPort= 12346      
+        #peerRecvPort = 12345
+        #bListen = True
+        #break
+    
+
 
 mainWindow= Tk()
 mainWindow.protocol("WM_DELETE_WINDOW", onClose)
@@ -79,9 +179,6 @@ sendButton.pack(side=RIGHT)
 
 inputEntryBox = Entry(entryFrame)
 inputEntryBox.pack(side=LEFT, expand=True, fill='x')
-
-peerIp = '192.168.1.13'
-selfIp = '192.168.1.13'
 
 peerSend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -116,9 +213,9 @@ while bIsWindowOpen:
         
     if(bUpdateDisplayBox):
         if(bPeerDisconnected):
-            #messageDisplay.config(state=NORMAL)
+            messageDisplay.config(state=NORMAL)
             messageDisplay.insert(END, "\nDisconnected....", "errorTextStyle")
-            #messageDisplay.config(state=DISABLED) 
+            messageDisplay.config(state=DISABLED) 
             bUpdateDisplayBox = False
             
         message = message.decode('utf-8')
