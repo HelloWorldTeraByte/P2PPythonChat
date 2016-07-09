@@ -1,8 +1,11 @@
 from tkinter import *
+from tkinter import messagebox
 import sys
 import time
 import threading
-import socket              
+import socket  
+import re
+
 
 def sendToPeerButton():
     message = inputEntryBox.get()
@@ -34,19 +37,25 @@ def connectButtonPressed():
     global peerSendPort
     global bListen
     global bShouldConnect
+    global peerIp
     try:
         peerRecvPort = int(recvPortsInputBox.get())
+        if(not (peerRecvPort > 1024 and peerRecvPort < 65536)):
+            messagebox.showinfo("Error", "Invalid recieve port info!")
+            peerRecvPort = 0
     except ValueError:
         peerRecvPort = 0
-        print("Not Valid")
+        messagebox.showinfo("Error", "Invalid recieve port info!")
         
     try:
         peerSendPort = int(sendPortsInputBox.get())
+        if(not (peerSendPort > 1024 and peerSendPort < 65536)):
+            messagebox.showinfo("Error", "Invalid send port info!")
+            peerSendPort = 0        
     except ValueError:
         peerSendPort = 0
-        print("Not Valid")        
-        
-    if(not (peerRecvPort == 0 and peerSendPort == 0)):
+        messagebox.showinfo("Error", "Invalid send port info!")      
+    if(not peerRecvPort == 0 and not peerSendPort == 0):
         if(bConnect.get() == 1):
             bListen = False
         else:
@@ -77,6 +86,13 @@ def incomingMessages():
         if(message.decode('utf-8') == "c10s3c0nn"):
             bPeerDisconnected = True
             
+def ServerCheckboxChanged():
+    if(isServer.get() == 1):
+        sendPortsInputBox.config(state='disabled')
+        recvPortsInputBox.config(state='disabled')
+    else:
+        sendPortsInputBox.config(state='normal')
+        recvPortsInputBox.config(state='normal')        
 bShouldReadIncomingMessages = True
 bPeerDisconnected = True
 bUpdateDisplayBox = False
@@ -88,6 +104,8 @@ peerRecvPort = 0
 bShouldConnect = False
 peerIp = '192.168.1.13'
 selfIp = '192.168.1.13'
+users = [] 
+userInfo = []
 
 connectionWindow = Tk()
 connectionWindow.resizable(width=False, height=False)
@@ -108,10 +126,10 @@ connectionInfoFrame.pack(side=LEFT)
 connectionInfoLabels.pack(side=LEFT)
 
 
-serverCheckBox = Checkbutton(connectionOptionsFrame, text = "Server", variable = isServer, onvalue = 1, offvalue = 0)
-serverCheckBox.pack(side=TOP)
-peerCheckBox = Checkbutton(connectionOptionsFrame, text = "Peer", variable = isServer, onvalue = 0, offvalue = 1)
-peerCheckBox.pack(side=TOP)
+serverCheckBox = Checkbutton(connectionOptionsFrame, text = "Server", variable = isServer, onvalue = 1, offvalue = 0, command=ServerCheckboxChanged)
+serverCheckBox.pack(side=TOP, anchor=W)
+peerCheckBox = Checkbutton(connectionOptionsFrame, text = "Peer", variable = isServer, onvalue = 0, offvalue = 1, comman=ServerCheckboxChanged)
+peerCheckBox.pack(side=TOP, anchor=W)
 
 connectCheckBox = Checkbutton(listenOrConnectFrame, text = "Connect", variable = bConnect, onvalue=1, offvalue=0, command=fillInDefaults)
 connectCheckBox.pack(side=LEFT)
@@ -139,13 +157,53 @@ recvPortsInputBox.pack(side=BOTTOM)
 fillInDefaults()
 connectionWindow.mainloop()
 
-
 if(not bShouldConnect):
     print("Connection failed!")
     sys.exit()
+    
+if(isServer.get() == 1):   
+    socketForServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)       
+    host = socket.gethostname() 
+    port = 45555                
+        
+    socketForServer.connect((host, port))
+    
+    buffer = socketForServer.recv(1024).decode('utf-8') 
+    
+    user = ""
+    keepAdding = False
+    bUserInfoCompleted = False
+    
+    for i in range(0,len(buffer)):
+        if(buffer[i] == "("):
+            keepAdding = True
+        if(buffer[i] == ")"):
+            keepAdding = False
+            bUserInfoCompleted = True
+        if(keepAdding):
+            user += buffer[i+1]
+            
+        if(bUserInfoCompleted):
+            user = user[:-1]
+            users.append(user)
+            user = ""
+            keepAdding = False
+            bUserInfoCompleted = False  
+            
+    for i in range(0, len(users)):
+        strToProcess = users[i]
+        userInfo.append([])        
+        #print(strToProcess)
+        for j in range(0, 3):
+            userInfo[i].append(re.findall("\'(.*?)\'",strToProcess)[j])
+    
+    print(userInfo)
+    peerSendPort = 12345
+    peerRecvPort = 12346
+        
+    socketForServer.close()
+    
 
-
-#while True:
     #choice = input("Peer To Peer Chat \n\t(C)to connect \n\t(L)to listen\n")
 
     #if(choice == "C" or choice == "c"):
