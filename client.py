@@ -94,15 +94,16 @@ def incomingMessages():
     global bUpdateDisplayBox
     global bPeerDisconnected
     while(bShouldReadIncomingMessages):
-        message = peerRecv.recv(3072)
+        message = peerRecv.recv(4096)
         bUpdateDisplayBox = True
         if(message.decode('utf-8') == "c10s3c0nn"):
             bPeerDisconnected = True
             
 def onPeerChosen():
     global peerID
-    peerID = peersList.curselection()[0]
-    peerSelectionWindow.destroy()
+    if(len(peersList.curselection()) == 1):
+        peerID = peersList.curselection()[0]
+        peerSelectionWindow.destroy()
     
 def getSelfIp():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -168,7 +169,7 @@ peerCheckBox.select()
 
 connectCheckBox = Checkbutton(listenOrConnectFrame, text = "Connect", variable = bConnect, onvalue=1, offvalue=0, command=fillInDefaults)
 connectCheckBox.pack(side=LEFT)
-recvCheckBox = Checkbutton(listenOrConnectFrame, text = "Receive", variable = bConnect, onvalue=0, offvalue=1, command=fillInDefaults)
+recvCheckBox = Checkbutton(listenOrConnectFrame, text = "Listen", variable = bConnect, onvalue=0, offvalue=1, command=fillInDefaults)
 recvCheckBox.pack(side=RIGHT)
 recvCheckBox.select()
 
@@ -197,12 +198,16 @@ if(not bShouldConnect):
     sys.exit()
     
 if(isServer.get() == 1):   
-    socketForServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)       
+    socketForServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+    socketForServer.settimeout(5)
     host = socket.gethostname() 
     port = 45555                
         
-    socketForServer.connect((host, port))
-    
+    try:
+        socketForServer.connect((host, port))
+    except socket.error as err:
+        print("We are sorry the servers seems to be down right now! \nError# : {}".format(err))
+        
     buffer = socketForServer.recv(1024).decode('utf-8') 
     
     user = ""
@@ -241,8 +246,8 @@ if(isServer.get() == 1):
     
     peersList = Listbox(peerSelectionWindow)
     for i in range(0, len(userInfo)):
-        insString = "{:15}  {} {} {}".format(str(userInfo[i][0]), str(userInfo[i][1]), str(userInfo[i][2]), str(userInfo[i][3]))
-        #insString = "{:15}".format("2")
+        insString = "{:>15}  {} {} {}".format(str(userInfo[i][0]), str(userInfo[i][1]), str(userInfo[i][2]), str(userInfo[i][3]))
+        #insString = "{:>15}".format("2")
         print(insString)
         peersList.insert(END, insString) 
         
@@ -253,9 +258,14 @@ if(isServer.get() == 1):
     
     peerSelectionWindow.mainloop()  
 
-    peerSendPort = int(userInfo[peerID][recvPortField])
-    peerRecvPort = int(userInfo[peerID][sendPortField])
-    peerIP = userInfo[peerID][ipField]
+    if(bListen):
+        peerSendPort = int(userInfo[peerID][sendPortField])
+        peerRecvPort = int(userInfo[peerID][recvPortField])
+        peerIP = userInfo[peerID][ipField]
+    else:       
+        peerSendPort = int(userInfo[peerID][recvPortField])
+        peerRecvPort = int(userInfo[peerID][sendPortField])
+        peerIP = userInfo[peerID][ipField]
 
 if(peerID == -1 and isServer.get() == 1):
     print("Connection failed!")
@@ -270,7 +280,7 @@ entryFrame.pack(side=BOTTOM, fill='x')
 
 messageDisplay = Text(mainWindow, height=30, width=40) 
 messageDisplay.pack(expand=True, fill='both')
-messageDisplay.tag_configure("sendTextStyle", foreground="green", justify='right')
+messageDisplay.tag_configure("sendTextStyle", foreground="blue", justify='right')
 messageDisplay.tag_configure("errorTextStyle", foreground="red", justify='center')
 messageDisplay.config(state=DISABLED)
 
@@ -294,9 +304,15 @@ if(bListen):
     peerSend.listen(1)              
     peer, peerAddr = peerSend.accept()    
     print("Connected to ", peerAddr)
-    peerRecv.connect((peerIp, peerRecvPort))
+    try:
+        peerRecv.connect((peerIp, peerRecvPort))
+    except socket.error as err:
+        print("The peer seems to be not responding!")        
 else:
-    peerRecv.connect((peerIp, peerRecvPort))
+    try:
+        peerRecv.connect((peerIp, peerRecvPort))
+    except socket.error as err:
+        print("The peer seems to be not responding!")
     print("Connected to: ", peerIp)
     print("Waiting for reply .. \n")
     peerSend.listen(1)
